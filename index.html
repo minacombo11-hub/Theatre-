@@ -1,0 +1,138 @@
+ <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حجز مسرح نجم المشرق الكامل</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; text-align: center; }
+        .header { background: #fff; padding: 10px; border-bottom: 2px solid #ddd; position: sticky; top: 0; z-index: 100; }
+        
+        /* تفعيل السحب لليمين واليسار */
+        .scroll-area { overflow-x: auto; padding: 20px; background: white; white-space: nowrap; }
+        .theater-wrapper { display: inline-block; min-width: 850px; padding-bottom: 100px; }
+        
+        .stage { background: #333; color: white; width: 300px; margin: 0 auto 30px; padding: 10px; border-radius: 0 0 15px 15px; font-weight: bold; }
+        
+        /* تقسيم الأجنحة */
+        .layout-container { display: flex; justify-content: center; gap: 40px; align-items: flex-start; }
+        
+        .row { display: flex; justify-content: center; margin-bottom: 6px; gap: 4px; }
+        .seat { width: 32px; height: 32px; background: #2ecc71; border-radius: 4px; cursor: pointer; color: white; font-size: 10px; line-height: 32px; text-align: center; font-weight: bold; flex-shrink: 0; }
+        .seat.selected { background: #3498db !important; }
+        .seat.occupied { background: #e74c3c !important; cursor: not-allowed; }
+        
+        .footer { position: fixed; bottom: 0; width: 100%; background: white; padding: 15px; border-top: 2px solid #eee; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }
+        input { width: 80%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        .btn { background: #25D366; color: white; border: none; padding: 15px; width: 85%; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h3 style="margin:0">🎭 خريطة مسرح نجم المشرق الكاملة</h3>
+    <small>اسحب الشاشة يميناً ويساراً لرؤية باقي الأجنحة</small>
+</div>
+
+<div class="scroll-area">
+    <div class="theater-wrapper">
+        <div class="stage">الخشبة (STAGE)</div>
+        
+        <div class="layout-container">
+            <div id="side-wing"></div>
+            
+            <div id="main-hall"></div>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    <input type="text" id="userName" placeholder="اسم الحاجز بالكامل">
+    <button class="btn" onclick="confirmBooking()">تأكيد الحجز وفتح واتساب</button>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCgg1RFfhHPEZTpDTLhxr-A5FDXtsxGDg",
+        databaseURL: "https://negm-el-mashrek-tickets-default-rtdb.firebaseio.com",
+        projectId: "negm-el-mashrek-tickets",
+        appId: "1:721777627538:web:c5d2c8551d1a071024f14b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function buildTheater() {
+        const side = document.getElementById('side-wing');
+        const main = document.getElementById('main-hall');
+
+        // 1. رسم الجناح الجانبي (O, P, Q, R, S)
+        const sideRows = [
+            {id: 'O', count: 6}, {id: 'P', count: 6}, {id: 'Q', count: 6}, 
+            {id: 'R', count: 5}, {id: 'S', count: 3}
+        ];
+        sideRows.forEach(r => {
+            let div = document.createElement('div'); div.className = 'row';
+            for(let i=r.count; i>=1; i--) div.innerHTML += `<div class="seat" data-id="${r.id}${i}">${r.id}${i}</div>`;
+            side.appendChild(div);
+        });
+
+        // 2. رسم الوسط الرئيسي (A - H)
+        const centralRows = ['A','B','C','D','E','F','G','H'];
+        centralRows.forEach(r => {
+            let div = document.createElement('div'); div.className = 'row';
+            let count = (r==='A'||r==='F') ? 14 : 13;
+            for(let i=1; i<=count; i++) div.innerHTML += `<div class="seat" data-id="${r}${i}">${r}${i}</div>`;
+            main.appendChild(div);
+        });
+
+        // فاصل بين الوسط والصفوف الخلفية
+        main.innerHTML += '<div style="height:30px"></div>';
+
+        // 3. رسم الصفوف الخلفية (I - M)
+        const bottomRows = [
+            {id:'I', count:11}, {id:'J', count:12}, {id:'K', count:12}, 
+            {id:'L', count:5}, {id:'M', count:12}
+        ];
+        bottomRows.forEach(r => {
+            let div = document.createElement('div'); div.className = 'row';
+            for(let i=1; i<=r.count; i++) div.innerHTML += `<div class="seat" data-id="${r.id}${i}">${r.id}${i}</div>`;
+            main.appendChild(div);
+        });
+    }
+
+    buildTheater();
+
+    // ربط Firebase
+    db.ref('seats').on('value', (snap) => {
+        const data = snap.val();
+        document.querySelectorAll('.seat').forEach(s => s.classList.remove('occupied'));
+        if(data) {
+            Object.keys(data).forEach(id => {
+                const el = document.querySelector(`[data-id="${id}"]`);
+                if(el) el.classList.add('occupied');
+            });
+        }
+    });
+
+    document.querySelectorAll('.seat').forEach(s => {
+        s.onclick = () => { if(!s.classList.contains('occupied')) s.classList.toggle('selected'); }
+    });
+
+    function confirmBooking() {
+        const name = document.getElementById('userName').value;
+        const selected = document.querySelectorAll('.seat.selected');
+        if(!name || selected.length === 0) return alert("اكتب الاسم واختار الكراسي");
+        
+        let ids = [];
+        selected.forEach(s => {
+            ids.push(s.dataset.id);
+            db.ref('seats/' + s.dataset.id).set({ status: 'occupied', user: name });
+        });
+
+        window.location.href = `https://wa.me/201287142498?text=حجز باسم ${name}: ${ids.join(',')}`;
+    }
+</script>
+</body>
+</html>
