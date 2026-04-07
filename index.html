@@ -1,59 +1,73 @@
- <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<!DOCTYPE html>
+<html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حجز مسرح نجم المشرق الكامل</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>مسرح نجم المشرق - الترتيب النهائي</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; text-align: center; }
-        .header { background: #fff; padding: 10px; border-bottom: 2px solid #ddd; position: sticky; top: 0; z-index: 100; }
+        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; direction: ltr; }
+        .header { background: white; padding: 10px; border-bottom: 2px solid #ddd; position: sticky; top: 0; z-index: 1000; text-align: center; }
+        .stage { background: #333; color: white; width: 200px; margin: 5px auto; padding: 5px; border-radius: 5px; font-weight: bold; font-size: 14px; }
         
-        /* تفعيل السحب لليمين واليسار */
-        .scroll-area { overflow-x: auto; padding: 20px; background: white; white-space: nowrap; }
-        .theater-wrapper { display: inline-block; min-width: 850px; padding-bottom: 100px; }
-        
-        .stage { background: #333; color: white; width: 300px; margin: 0 auto 30px; padding: 10px; border-radius: 0 0 15px 15px; font-weight: bold; }
-        
-        /* تقسيم الأجنحة */
-        .layout-container { display: flex; justify-content: center; gap: 40px; align-items: flex-start; }
-        
-        .row { display: flex; justify-content: center; margin-bottom: 6px; gap: 4px; }
-        .seat { width: 32px; height: 32px; background: #2ecc71; border-radius: 4px; cursor: pointer; color: white; font-size: 10px; line-height: 32px; text-align: center; font-weight: bold; flex-shrink: 0; }
+        /* حاوية المسرح تضمن ظهور كل شيء */
+        .theater-container { 
+            padding: 30px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 40px; 
+            align-items: center; 
+            min-width: 900px; /* العرض الكافي لظهور الجناحين جنب بعض */
+            background: white;
+        }
+
+        .top-layout { display: flex; gap: 60px; align-items: flex-start; justify-content: center; }
+        .grid { display: grid; gap: 4px; }
+
+        .seat { 
+            width: 28px; height: 28px; background: #2ecc71; border-radius: 4px; 
+            cursor: pointer; color: white; font-size: 9px; 
+            display: flex; align-items: center; justify-content: center; font-weight: bold; 
+        }
         .seat.selected { background: #3498db !important; }
-        .seat.occupied { background: #e74c3c !important; cursor: not-allowed; }
-        
-        .footer { position: fixed; bottom: 0; width: 100%; background: white; padding: 15px; border-top: 2px solid #eee; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }
-        input { width: 80%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        .btn { background: #25D366; color: white; border: none; padding: 15px; width: 85%; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .seat.occupied { background: #e74c3c !important; cursor: not-allowed; opacity: 0.7; }
+
+        /* تقسيمات الجريد مطابقة للصورة تماماً */
+        .side-wing { grid-template-columns: repeat(6, 28px); }
+        .main-wing { grid-template-columns: repeat(14, 28px); }
+        .bottom-wing { grid-template-columns: repeat(12, 28px); }
+
+        .footer { position: fixed; bottom: 0; width: 100%; background: white; padding: 15px; border-top: 1px solid #ddd; z-index: 1000; text-align: center; }
+        input { width: 80%; padding: 12px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; text-align: center; }
+        .btn { background: #25D366; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 18px; font-weight: bold; width: 85%; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h3 style="margin:0">🎭 خريطة مسرح نجم المشرق الكاملة</h3>
-    <small>اسحب الشاشة يميناً ويساراً لرؤية باقي الأجنحة</small>
+    <h3 style="margin:0; direction: rtl;">🎭 مسرح نجم المشرق</h3>
+    <div class="stage">STAGE</div>
+    <div style="font-size: 10px; color: #888; direction: rtl;">استخدم الزوم لرؤية أفضل 🔍</div>
 </div>
 
-<div class="scroll-area">
-    <div class="theater-wrapper">
-        <div class="stage">الخشبة (STAGE)</div>
-        
-        <div class="layout-container">
-            <div id="side-wing"></div>
-            
-            <div id="main-hall"></div>
+<div style="overflow-x: auto; width: 100%;">
+    <div class="theater-container">
+        <div class="top-layout">
+            <div class="grid side-wing" id="sideWing"></div>
+            <div class="grid main-wing" id="mainWing"></div>
         </div>
+        <div class="grid bottom-wing" id="bottomWing"></div>
     </div>
 </div>
 
 <div class="footer">
-    <input type="text" id="userName" placeholder="اسم الحاجز بالكامل">
-    <button class="btn" onclick="confirmBooking()">تأكيد الحجز وفتح واتساب</button>
+    <input type="text" id="userName" placeholder="اكتب اسمك هنا">
+    <button class="btn" onclick="confirmBooking()">تأكيد الحجز (WhatsApp)</button>
 </div>
 
 <script>
+    // إعدادات الفايربيس بتاعتك
     const firebaseConfig = {
         apiKey: "AIzaSyCgg1RFfhHPEZTpDTLhxr-A5FDXtsxGDg",
         databaseURL: "https://negm-el-mashrek-tickets-default-rtdb.firebaseio.com",
@@ -63,11 +77,74 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function buildTheater() {
-        const side = document.getElementById('side-wing');
-        const main = document.getElementById('main-hall');
+    function init() {
+        const side = document.getElementById('sideWing');
+        const main = document.getElementById('mainWing');
+        const bottom = document.getElementById('bottomWing');
 
-        // 1. رسم الجناح الجانبي (O, P, Q, R, S)
+        // الجناح الجانبي O-S
+        const sRows = [{id:'O',n:6},{id:'P',n:6},{id:'Q',n:6},{id:'R',n:5},{id:'S',n:3}];
+        sRows.forEach(r => {
+            for(let i=1; i<=6; i++) {
+                if(i <= r.n) side.innerHTML += `<div class="seat" data-id="${r.id}${i}">${r.id}${i}</div>`;
+                else side.innerHTML += `<div></div>`;
+            }
+        });
+
+        // الجناح الرئيسي A-H
+        ['A','B','C','D','E','F','G','H'].forEach(r => {
+            let limit = (r==='A'||r==='F') ? 14 : 13;
+            for(let i=1; i<=14; i++) {
+                if(i <= limit) main.innerHTML += `<div class="seat" data-id="${r}${i}">${r}${i}</div>`;
+                else main.innerHTML += `<div></div>`;
+            }
+        });
+
+        // الجناح السفلي I-M
+        const bRows = [{id:'I',n:11},{id:'J',n:12},{id:'K',n:12},{id:'L',n:5},{id:'M',n:12}];
+        bRows.forEach(r => {
+            for(let i=1; i<=12; i++) {
+                if(i <= r.n) bottom.innerHTML += `<div class="seat" data-id="${r.id}${i}">${r.id}${i}</div>`;
+                else bottom.innerHTML += `<div></div>`;
+            }
+        });
+    }
+
+    init();
+
+    // تحديث حالة الكراسي من السيرفر
+    db.ref('seats').on('value', snap => {
+        const data = snap.val();
+        document.querySelectorAll('.seat').forEach(s => s.classList.remove('occupied'));
+        if(data) {
+            Object.keys(data).forEach(id => {
+                const el = document.querySelector(`[data-id="${id}"]`);
+                if(el) el.classList.add('occupied');
+            });
+        }
+    });
+
+    // اختيار الكراسي
+    document.addEventListener('click', e => {
+        if(e.target.classList.contains('seat') && !e.target.classList.contains('occupied')) {
+            e.target.classList.toggle('selected');
+        }
+    });
+
+    function confirmBooking() {
+        const name = document.getElementById('userName').value;
+        const sel = document.querySelectorAll('.seat.selected');
+        if(!name || sel.length === 0) return alert("اكتب الاسم واختار الكراسي");
+        let ids = [];
+        sel.forEach(s => {
+            ids.push(s.dataset.id);
+            db.ref('seats/' + s.dataset.id).set({ status: 'occupied', user: name });
+        });
+        window.location.href = `https://wa.me/201287142498?text=حجز ${name}: ${ids.join(',')}`;
+    }
+</script>
+</body>
+</html>
         const sideRows = [
             {id: 'O', count: 6}, {id: 'P', count: 6}, {id: 'Q', count: 6}, 
             {id: 'R', count: 5}, {id: 'S', count: 3}
